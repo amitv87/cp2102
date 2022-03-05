@@ -116,8 +116,8 @@ class cp2102 extends EventEmitter {
 
   write(data, cb) {
     this.transferOut(1, data).then(() => {
-      cb();
-    }, err => cb(err, null));
+      cb && cb();
+    }, err => cb && cb(err, null));
   }
 
   transferIn(endpoint, length) {
