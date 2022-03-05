@@ -23,14 +23,16 @@ class cp2102 extends EventEmitter {
     super();
     this.device = usb.findByIds(vendorId, productId);
     this.opts = opts;
-    this.device.open(false); // don't auto-configure
+    this.device.open(true);
     const self = this;
 
+    this.if_idx = opts.idx || 0;
+
     this.device.setConfiguration(1, () => {
-      [self.iface] = this.device.interfaces;
+      self.iface = this.device.interfaces[this.if_idx];
       self.iface.claim();
 
-      self.inEndpoint = self.iface.endpoint(0x81);
+      self.inEndpoint = self.iface.endpoint(0x81 + this.if_idx);
       self.inEndpoint.startPoll();
       self.inEndpoint.on('data', (data) => {
         self.emit('data', data);
@@ -42,7 +44,7 @@ class cp2102 extends EventEmitter {
             requestType: 'vendor',
             recipient: 'device',
             request: 0x00,
-            index: 0x00,
+            index: this.if_idx,
             value: 0x01,
           });
 
@@ -50,7 +52,7 @@ class cp2102 extends EventEmitter {
             requestType: 'vendor',
             recipient: 'device',
             request: 0x07,
-            index: 0x00,
+            index: this.if_idx,
             value: 0x03 | 0x0100 | 0x0200,
           });
 
@@ -58,7 +60,7 @@ class cp2102 extends EventEmitter {
             requestType: 'vendor',
             recipient: 'device',
             request: 0x01,
-            index: 0x00,
+            index: this.if_idx,
             value: 0x384000 / this.opts.baudRate,
           });
         } catch (err) {
@@ -115,7 +117,7 @@ class cp2102 extends EventEmitter {
   }
 
   write(data, cb) {
-    this.transferOut(1, data).then(() => {
+    this.transferOut(this.if_idx + 1, data).then(() => {
       cb && cb();
     }, err => cb && cb(err, null));
   }
